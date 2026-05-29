@@ -6,7 +6,7 @@ const router = express.Router();
 const cache = new NodeCache({ stdTTL: 3600 });
 
 const OUR_DOMAIN = 'memoryapi.org';
-const AGENTIC_MARKET_URL = 'https://agentic.market/v1/services';
+const AGENTIC_MARKET_URL = 'https://api.agentic.market/v1/services?limit=1000';
 
 async function getEcosystem(category, sort) {
   const cacheKey = `ecosystem_${category || 'all'}_${sort || 'count'}`;

@@ -10,6 +10,7 @@ const { HTTPFacilitatorClient } = require('@x402/core/server');
 const dashboardRouter = require('./routes/dashboard');
 const activityRouter = require('./routes/activity');
 const ecosystemRouter = require('./routes/ecosystem');
+const marketRouter = require('./routes/market');
 const mcpRouter = require('./routes/mcp');
 
 const app = express();
@@ -71,6 +72,16 @@ try {
         }}}
       },
 
+      'GET /x402/monitor/market': {
+        accepts: [{ scheme: 'exact', price: '$0.005', network: X402_NETWORK, payTo: PAY_TO }],
+        description: 'x402 market intelligence — on-chain transaction history, Agentic Market service counts by category, ecosystem trends.',
+        extensions: { bazaar: { info: {
+          description: 'x402 ecosystem market intelligence. On-chain USDC transaction data, Agentic Market service directory stats, and category breakdowns.',
+          input: { type: 'http', method: 'GET', queryParams: {}, schema: { properties: {}, required: [] } },
+          output: { example: { success: true, total_received_usdc: 2.15, unique_payers: 3, market_services: { total: 941, by_category: { Data: 45, Inference: 12 } } } }
+        }}}
+      },
+
       'GET /x402/monitor/ecosystem': {
         accepts: [{ scheme: 'exact', price: '$0.001', network: X402_NETWORK, payTo: PAY_TO }],
         description: 'x402 ecosystem intelligence — service counts by category from Agentic Market, with memoryapi.org listings highlighted.',
@@ -99,6 +110,7 @@ try {
 
 // --- x402 Route Handlers ---
 app.use('/x402/monitor/activity', activityRouter);
+app.use('/x402/monitor/market', marketRouter);
 app.use('/x402/monitor/ecosystem', ecosystemRouter);
 
 app.listen(PORT, () => console.log(`AgentMonitor running on port ${PORT}`));
