@@ -1,0 +1,19 @@
+{
+  "name": "agentmonitor-backend",
+  "version": "1.0.0",
+  "description": "AgentFEC — FEC Campaign Finance x402 API",
+  "main": "src/index.js",
+  "scripts": { "start": "node src/index.js" },
+  "dependencies": {
+    "@coinbase/x402": "2.1.0",
+    "@x402/core": "2.10.0",
+    "@x402/evm": "2.10.0",
+    "@x402/express": "2.10.0",
+    "@x402/extensions": "2.10.0",
+    "axios": "^1.9.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "node-cache": "^5.1.2"
+  }
+}

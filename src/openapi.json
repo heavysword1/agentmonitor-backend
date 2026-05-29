@@ -1,0 +1,113 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AgentMonitor x402 API",
+    "description": "x402 ecosystem intelligence and activity monitoring for memoryapi.org. Pay-per-query via x402 protocol.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "https://monitor.memoryapi.org", "description": "Production" }
+  ],
+  "paths": {
+    "/x402/monitor/activity": {
+      "get": {
+        "summary": "x402 Activity Stats",
+        "description": "Get paid API call activity from memoryapi.org nginx logs. Returns top endpoints, call counts, and trend data. Requires x402 payment of $0.001.",
+        "operationId": "getActivity",
+        "security": [],
+        "parameters": [
+          { "name": "hours", "in": "query", "description": "Lookback window in hours (1-168, default 24)", "schema": { "type": "integer", "default": 24, "minimum": 1, "maximum": 168 } },
+          { "name": "service", "in": "query", "description": "Filter by service name (e.g. clinical, bio, research)", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Activity stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "period_hours": { "type": "integer" },
+                    "total_paid_calls": { "type": "integer" },
+                    "top_endpoints": { "type": "array", "items": { "type": "object", "properties": { "endpoint": { "type": "string" }, "calls": { "type": "integer" }, "trend": { "type": "string", "enum": ["up", "down", "stable"] } } } },
+                    "source": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "402": { "description": "Payment required — include x402 payment header" }
+        }
+      }
+    },
+    "/x402/monitor/ecosystem": {
+      "get": {
+        "summary": "x402 Ecosystem Intelligence",
+        "description": "Get x402 service ecosystem data from Agentic Market. Returns services by category and memoryapi.org listings. Requires x402 payment of $0.001.",
+        "operationId": "getEcosystem",
+        "security": [],
+        "parameters": [
+          { "name": "category", "in": "query", "description": "Filter by category: inference, data, or all", "schema": { "type": "string", "default": "all" } },
+          { "name": "sort", "in": "query", "description": "Sort order: count or alphabetical", "schema": { "type": "string", "default": "count", "enum": ["count", "alphabetical"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ecosystem intelligence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "total_services": { "type": "integer" },
+                    "by_category": { "type": "object" },
+                    "our_services": { "type": "array" },
+                    "source": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "402": { "description": "Payment required — include x402 payment header" }
+        }
+      }
+    },
+    "/mcp": {
+      "get": {
+        "summary": "MCP Server Info",
+        "description": "Returns MCP server metadata and available tools.",
+        "operationId": "getMcpInfo",
+        "security": [],
+        "responses": {
+          "200": { "description": "MCP server info" }
+        }
+      },
+      "post": {
+        "summary": "MCP Tool Execution",
+        "description": "Execute MCP tools: get_x402_activity, get_x402_ecosystem",
+        "operationId": "postMcp",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": { "type": "string" },
+                  "method": { "type": "string" },
+                  "params": { "type": "object" },
+                  "id": {}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "JSON-RPC response" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgentMonitor Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; font-size: 14px; min-height: 100vh; }
+
+    /* Auth screen */
+    #auth-screen {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; gap: 16px;
+    }
+    #auth-screen h1 { color: #58a6ff; font-size: 24px; margin-bottom: 8px; }
+    #auth-screen input {
+      padding: 10px 16px; border-radius: 6px; border: 1px solid #30363d;
+      background: #161b22; color: #c9d1d9; font-size: 15px; width: 280px; outline: none;
+    }
+    #auth-screen input:focus { border-color: #58a6ff; }
+    #auth-screen button {
+      padding: 10px 28px; background: #238636; color: #fff; border: none;
+      border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;
+    }
+    #auth-screen button:hover { background: #2ea043; }
+    #auth-error { color: #f85149; font-size: 13px; }
+
+    /* Main dashboard */
+    #dashboard { display: none; padding: 24px; max-width: 1200px; margin: 0 auto; }
+
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    header h1 { color: #58a6ff; font-size: 22px; }
+    #refresh-status { font-size: 12px; color: #6e7681; }
+
+    /* Summary bar */
+    .summary-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+      padding: 16px 20px;
+    }
+    .stat-card .label { font-size: 12px; color: #6e7681; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .stat-card .value { font-size: 28px; font-weight: 700; color: #58a6ff; }
+    .stat-card .sub { font-size: 11px; color: #6e7681; margin-top: 4px; }
+
+    /* Sections */
+    .section { margin-bottom: 28px; }
+    .section h2 { font-size: 15px; color: #e6edf3; margin-bottom: 12px; border-bottom: 1px solid #21262d; padding-bottom: 8px; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left; padding: 8px 12px; font-size: 11px;
+      color: #6e7681; text-transform: uppercase; letter-spacing: 0.5px;
+      border-bottom: 1px solid #21262d;
+    }
+    tbody tr:hover { background: #161b22; }
+    tbody td { padding: 8px 12px; border-bottom: 1px solid #21262d; font-size: 13px; }
+    tbody td:first-child { font-family: monospace; color: #79c0ff; }
+
+    .trend-up { color: #3fb950; }
+    .trend-down { color: #f85149; }
+    .trend-stable { color: #6e7681; }
+
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .tag-green { background: #0d4429; color: #3fb950; border: 1px solid #238636; }
+    .tag-blue { background: #0c2d6b; color: #58a6ff; border: 1px solid #1f6feb; }
+
+    .empty { color: #6e7681; font-style: italic; padding: 16px 0; }
+
+    .revenue { color: #3fb950; }
+  </style>
+</head>
+<body>
+
+<!-- Auth Screen -->
+<div id="auth-screen">
+  <h1>🔒 AgentMonitor</h1>
+  <p style="color:#6e7681; font-size:13px;">Enter dashboard key to continue</p>
+  <input type="password" id="key-input" placeholder="Dashboard key..." autofocus />
+  <button onclick="login()">Unlock</button>
+  <div id="auth-error"></div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+  <header>
+    <h1>⚡ AgentMonitor Dashboard</h1>
+    <span id="refresh-status">Refreshing in <span id="countdown">30</span>s</span>
+  </header>
+
+  <!-- Summary Bar -->
+  <div class="summary-bar">
+    <div class="stat-card">
+      <div class="label">Paid Calls (24h)</div>
+      <div class="value" id="stat-24h">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Paid Calls (1h)</div>
+      <div class="value" id="stat-1h">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Unique Payers</div>
+      <div class="value" id="stat-payers">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Est. Revenue (24h)</div>
+      <div class="value revenue" id="stat-revenue">—</div>
+      <div class="sub">@ $0.002 avg</div>
+    </div>
+  </div>
+
+  <!-- Top Endpoints -->
+  <div class="section">
+    <h2>📊 Top Endpoints</h2>
+    <table>
+      <thead><tr><th>Endpoint</th><th>Calls (1h)</th><th>Calls (24h)</th><th>Trend</th></tr></thead>
+      <tbody id="top-endpoints"></tbody>
+    </table>
+  </div>
+
+  <!-- Paying Agents -->
+  <div class="section">
+    <h2>🤖 Paying Agents</h2>
+    <table>
+      <thead><tr><th>IP</th><th>Total Calls</th><th>Last Endpoint</th><th>Last Seen</th></tr></thead>
+      <tbody id="paying-agents"></tbody>
+    </table>
+  </div>
+
+  <!-- Demand Signals -->
+  <div class="section">
+    <h2>📡 Demand Signals (402 Probes)</h2>
+    <table>
+      <thead><tr><th>Endpoint</th><th>Probes (24h)</th></tr></thead>
+      <tbody id="demand-signals"></tbody>
+    </table>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="section">
+    <h2>🕐 Recent Paid Activity</h2>
+    <table>
+      <thead><tr><th>Timestamp</th><th>IP</th><th>Method</th><th>Endpoint</th></tr></thead>
+      <tbody id="recent-activity"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  let dashKey = '';
+  let countdownVal = 30;
+  let countdownTimer = null;
+  let refreshTimer = null;
+
+  async function login() {
+    const input = document.getElementById('key-input').value.trim();
+    if (!input) return;
+    const res = await fetch(`/api/stats?key=${encodeURIComponent(input)}`);
+    if (res.status === 401) {
+      document.getElementById('auth-error').textContent = 'Invalid key. Try again.';
+      return;
+    }
+    dashKey = input;
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    const data = await res.json();
+    renderDashboard(data);
+    startAutoRefresh();
+  }
+
+  document.getElementById('key-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
+
+  async function fetchStats() {
+    const res = await fetch(`/api/stats?key=${encodeURIComponent(dashKey)}`);
+    if (!res.ok) return null;
+    return res.json();
+  }
+
+  function renderDashboard(data) {
+    // Summary
+    const s = data.summary || {};
+    document.getElementById('stat-24h').textContent = s.paid_calls_24h ?? '0';
+    document.getElementById('stat-1h').textContent = s.paid_calls_1h ?? '0';
+    document.getElementById('stat-payers').textContent = s.unique_payers ?? '0';
+    document.getElementById('stat-revenue').textContent = '$' + (s.est_revenue_usd ?? 0).toFixed(4);
+
+    // Top Endpoints
+    const epBody = document.getElementById('top-endpoints');
+    epBody.innerHTML = '';
+    if ((data.top_endpoints || []).length === 0) {
+      epBody.innerHTML = '<tr><td colspan="4" class="empty">No data yet</td></tr>';
+    } else {
+      for (const ep of data.top_endpoints) {
+        const trend = ep.calls_1h > (ep.calls_24h / 24) ? '↑' : ep.calls_1h < (ep.calls_24h / 48) ? '↓' : '→';
+        const tClass = trend === '↑' ? 'trend-up' : trend === '↓' ? 'trend-down' : 'trend-stable';
+        epBody.innerHTML += `<tr>
+          <td>${ep.endpoint}</td>
+          <td>${ep.calls_1h}</td>
+          <td>${ep.calls_24h}</td>
+          <td class="${tClass}">${trend}</td>
+        </tr>`;
+      }
+    }
+
+    // Paying Agents
+    const agBody = document.getElementById('paying-agents');
+    agBody.innerHTML = '';
+    if ((data.paying_agents || []).length === 0) {
+      agBody.innerHTML = '<tr><td colspan="4" class="empty">No agents yet</td></tr>';
+    } else {
+      for (const ag of data.paying_agents) {
+        const lastSeen = new Date(ag.last_seen).toLocaleString();
+        agBody.innerHTML += `<tr>
+          <td>${ag.ip}</td>
+          <td><span class="tag tag-green">${ag.total_calls}</span></td>
+          <td>${ag.last_endpoint || '—'}</td>
+          <td>${lastSeen}</td>
+        </tr>`;
+      }
+    }
+
+    // Demand Signals
+    const dsBody = document.getElementById('demand-signals');
+    dsBody.innerHTML = '';
+    if ((data.demand_signals || []).length === 0) {
+      dsBody.innerHTML = '<tr><td colspan="2" class="empty">No probe activity</td></tr>';
+    } else {
+      for (const ds of data.demand_signals) {
+        dsBody.innerHTML += `<tr>
+          <td>${ds.endpoint}</td>
+          <td><span class="tag tag-blue">${ds.probes_24h}</span></td>
+        </tr>`;
+      }
+    }
+
+    // Recent Activity
+    const raBody = document.getElementById('recent-activity');
+    raBody.innerHTML = '';
+    if ((data.recent_paid || []).length === 0) {
+      raBody.innerHTML = '<tr><td colspan="4" class="empty">No recent activity</td></tr>';
+    } else {
+      for (const r of data.recent_paid) {
+        const ts = new Date(r.timestamp).toLocaleString();
+        raBody.innerHTML += `<tr>
+          <td>${ts}</td>
+          <td>${r.ip}</td>
+          <td>${r.method}</td>
+          <td>${r.endpoint}</td>
+        </tr>`;
+      }
+    }
+  }
+
+  function startAutoRefresh() {
+    countdownVal = 30;
+    document.getElementById('countdown').textContent = countdownVal;
+
+    if (countdownTimer) clearInterval(countdownTimer);
+    if (refreshTimer) clearInterval(refreshTimer);
+
+    countdownTimer = setInterval(() => {
+      countdownVal--;
+      document.getElementById('countdown').textContent = countdownVal;
+      if (countdownVal <= 0) countdownVal = 30;
+    }, 1000);
+
+    refreshTimer = setInterval(async () => {
+      countdownVal = 30;
+      const data = await fetchStats();
+      if (data) renderDashboard(data);
+    }, 30000);
+  }
+</script>
+</body>
+</html>
