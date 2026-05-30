@@ -1,3 +1,4 @@
+const axios = require('axios');
 const express = require('express');
 const fs = require('fs');
 const router = express.Router();
@@ -27,7 +28,10 @@ function parseNginxTime(timeStr) {
 
 function readLogs() {
   try {
-    return fs.readFileSync(LOG_PATH, 'utf8').split('\n');
+    const lines = [];
+    try { lines.push(...fs.readFileSync(LOG_PATH, 'utf8').split('\n')); } catch(e) {}
+    try { lines.push(...fs.readFileSync(LOG_PATH + '.1', 'utf8').split('\n')); } catch(e) {}
+    return lines;
   } catch (e) {
     return [];
   }
@@ -138,13 +142,42 @@ function buildStats(lines, now) {
   };
 }
 
-router.get('/stats', (req, res) => {
+router.get('/stats', async (req, res) => {
   const { key } = req.query;
   if (!key || key !== process.env.DASHBOARD_KEY) {
     return res.status(401).json({ error: 'Invalid key' });
   }
   const lines = readLogs();
   const stats = buildStats(lines, Date.now());
+
+  // Add on-chain data via Alchemy
+  try {
+    const ALCHEMY = process.env.ALCHEMY_API_KEY;
+    if (ALCHEMY) {
+      const { data: alchData } = await axios.post(
+        `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY}`,
+        { id:1, jsonrpc:'2.0', method:'alchemy_getAssetTransfers', params:[{
+          toAddress: '0x24FAcafEB49b4e3FACF0B3e69604A2F4640c9bf2',
+          contractAddresses: ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'],
+          category: ['erc20'], withMetadata: true, maxCount: '0x64', order: 'desc'
+        }]},
+        { timeout: 10000 }
+      );
+      const txs = alchData.result?.transfers || [];
+      const totalUsdc = txs.reduce((s,t) => s + parseFloat(t.value||0), 0);
+      stats.onchain = {
+        total_usdc: Math.round(totalUsdc * 10000) / 10000,
+        tx_count: txs.length,
+        unique_payers: [...new Set(txs.map(t=>t.from))].length,
+        recent: txs.slice(0,5).map(t => ({
+          amount: parseFloat(t.value),
+          from: t.from?.substring(0,14)+'...',
+          date: t.metadata?.blockTimestamp?.substring(0,10)
+        }))
+      };
+    }
+  } catch(e) { stats.onchain = { error: e.message }; }
+
   res.json(stats);
 });
 
