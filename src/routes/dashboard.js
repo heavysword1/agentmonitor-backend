@@ -178,6 +178,33 @@ router.get('/stats', async (req, res) => {
     }
   } catch(e) { stats.onchain = { error: e.message }; }
 
+
+  // Stripe MPP
+  try {
+    const SK = process.env.STRIPE_SECRET_KEY;
+    if (SK) {
+      const [ev, imp] = await Promise.all([
+        axios.get('https://api.stripe.com/v2/core/events?limit=50', {
+          headers:{'Authorization':'Bearer '+SK,'Stripe-Version':'2026-05-27.preview'}, timeout:10000
+        }),
+        axios.get('https://api.stripe.com/v2/commerce/product_catalog/imports?limit=3', {
+          headers:{'Authorization':'Bearer '+SK,'Stripe-Version':'2026-05-27.preview'}, timeout:10000
+        })
+      ]);
+      const events = ev.data.data || [];
+      const agentEvts = events.filter(e => e.type?.includes('orchestrated_commerce'));
+      const agents = {};
+      agentEvts.forEach(e => { const n=e.data?.orchestrator_details?.name||'Unknown'; agents[n]=(agents[n]||0)+1; });
+      const latest = (imp.data.data||[])[0];
+      stats.stripe_mpp = {
+        agent_interactions: agentEvts.length,
+        active_agents: agents,
+        catalog_status: latest ? {status:latest.status, products: latest.status_details?.succeeded?.success_count||0} : null,
+        recent_events: agentEvts.slice(0,5).map(e=>({type:e.type,created:e.created?.substring(0,10),agent:e.data?.orchestrator_details?.name}))
+      };
+    }
+  } catch(e) { stats.stripe_mpp = {error:e.message?.substring(0,80)}; }
+
   res.json(stats);
 });
 
