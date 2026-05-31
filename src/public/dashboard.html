@@ -91,21 +91,31 @@
   <!-- Summary Bar -->
   <div class="summary-bar">
     <div class="stat-card">
-      <div class="label">Paid Calls (24h)</div>
+      <div class="label">Total Calls (24h)</div>
       <div class="value" id="stat-24h">—</div>
     </div>
     <div class="stat-card">
-      <div class="label">Paid Calls (1h)</div>
+      <div class="label">Calls (1h)</div>
       <div class="value" id="stat-1h">—</div>
     </div>
     <div class="stat-card">
-      <div class="label">Unique Payers</div>
+      <div class="label">Unique Payers (24h)</div>
       <div class="value" id="stat-payers">—</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" style="border-color:#22c55e33">
       <div class="label">Est. Revenue (24h)</div>
-      <div class="value revenue" id="stat-revenue">—</div>
-      <div class="sub">@ $0.002 avg</div>
+      <div class="value revenue" id="stat-revenue" style="color:#22c55e">—</div>
+      <div class="sub">USDC estimated</div>
+    </div>
+    <div class="stat-card" style="border-color:#f9731633">
+      <div class="label">Confirmed On-Chain</div>
+      <div class="value" id="stat-onchain" style="color:#f97316">—</div>
+      <div class="sub">USDC via Alchemy</div>
+    </div>
+    <div class="stat-card" style="border-color:#3b82f633">
+      <div class="label">Total On-Chain Txs</div>
+      <div class="value" id="stat-ontxs" style="color:#3b82f6">—</div>
+      <div class="sub">Base mainnet</div>
     </div>
   </div>
 
@@ -184,6 +194,12 @@
     document.getElementById('stat-24h').textContent = s.paid_calls_24h ?? '0';
     document.getElementById('stat-1h').textContent = s.paid_calls_1h ?? '0';
     document.getElementById('stat-payers').textContent = s.unique_payers ?? '0';
+    // On-chain confirmed stats
+    const oc = data.onchain || {};
+    if (document.getElementById('stat-onchain'))
+      document.getElementById('stat-onchain').textContent = oc.total_usdc ? '$' + oc.total_usdc.toFixed(4) : '—';
+    if (document.getElementById('stat-ontxs'))
+      document.getElementById('stat-ontxs').textContent = oc.tx_count ?? '—';
     document.getElementById('stat-revenue').textContent = '$' + (s.est_revenue_usd ?? 0).toFixed(4);
 
     // Top Endpoints
